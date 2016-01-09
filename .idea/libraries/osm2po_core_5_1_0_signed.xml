@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="osm2po-core-5.1.0-signed">
     <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../../Lib/osm2po/osm2po-core-5.1.0-signed.jar!/" />
+      <root url="jar://$PROJECT_DIR$/../../Lib/osm2po-core-5.1.0-signed.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

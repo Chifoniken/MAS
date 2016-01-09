@@ -20,26 +20,26 @@ public class Main {
 
     public static void main(String[] args) {
 
-        Runtime runtime = Runtime.instance();
-        Profile profile = new ProfileImpl();
-        profile.setParameter(Profile.MAIN_HOST, "localhost");
-        profile.setParameter(Profile.GUI, "true");
+//        Runtime runtime = Runtime.instance();
+//        Profile profile = new ProfileImpl();
+//        profile.setParameter(Profile.MAIN_HOST, "localhost");
+//        profile.setParameter(Profile.GUI, "true");
+//
+//        ContainerController containerController = runtime.createMainContainer(profile);
+//
+//        AgentController dispatcher;
+//
+//        try {
+//            dispatcher = containerController.createNewAgent("Dispatcher", "com.diploma.Dispatcher", null);
+//            dispatcher.start();
+//        } catch (StaleProxyException e) {
+//            e.printStackTrace();
+//        }
 
-        ContainerController containerController = runtime.createMainContainer(profile);
+        MapGUI map = new MapGUI();
+        map.setVisible(true);
 
-        AgentController dispatcher;
-
-        try {
-            dispatcher = containerController.createNewAgent("Dispatcher", "com.diploma.Dispatcher", null);
-            dispatcher.start();
-        } catch (StaleProxyException e) {
-            e.printStackTrace();
-        }
-
-//        MapGUI map = new MapGUI();
-//        map.setVisible(true);
-
-//        readOSM();
+        readOSM();
     }
 
     private static void readOSM() {
