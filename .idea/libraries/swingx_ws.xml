@@ -1,9 +1,0 @@
-<component name="libraryTable">
-  <library name="swingx-ws">
-    <CLASSES>
-      <root url="jar://$PROJECT_DIR$/../../Lib/swingx-ws/swingx-ws.jar!/" />
-    </CLASSES>
-    <JAVADOC />
-    <SOURCES />
-  </library>
-</component>
