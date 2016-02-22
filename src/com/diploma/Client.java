@@ -3,24 +3,24 @@ package com.diploma;
 import jade.core.AID;
 import jade.core.Agent;
 import jade.core.behaviours.SimpleBehaviour;
-import jade.gui.GuiAgent;
 import jade.gui.GuiEvent;
 import jade.lang.acl.ACLMessage;
-import org.openstreetmap.gui.jmapviewer.Coordinate;
+
+import java.io.IOException;
+import java.io.Serializable;
 
 /**
  * Created by arsen on 20.12.2015.
  */
-public class Client extends GuiAgent {
-    public static String DO_DELETE = "doDelete";
+public class Client extends PrimitiveAgent implements Serializable {
 
-    AID dispatcher;
-    Coordinate coordinate;
 
+    @Override
     protected void setup() {
-
+        super.setup();
         addBehaviour(new ClientBehavior(this));
     }
+
 
     @Override
     protected void onGuiEvent(GuiEvent guiEvent) {
@@ -32,9 +32,11 @@ public class Client extends GuiAgent {
 
         private boolean finished = false;
 
+
         public ClientBehavior(Agent a) {
             super(a);
         }
+
 
         public void action() {
 
@@ -54,24 +56,38 @@ public class Client extends GuiAgent {
 
         }
 
+
         @Override
         public void onStart() {
             super.onStart();
 
+            coordinate = (SerializableCoordinate) getArguments()[1];
+
             dispatcher = new AID((String) getArguments()[0], true);
             ACLMessage msg = new ACLMessage(ACLMessage.SUBSCRIBE);
-            msg.setContent(Dispatcher.SUBSCRIBE_CLIENT);
+            msg.addUserDefinedParameter(Data.AGENT_TYPE, agentType());
             msg.addReceiver(dispatcher);
-            send(msg);
 
-            coordinate = (Coordinate) getArguments()[1];
+            try {
+                msg.setContentObject(myAgent);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            send(msg);
 
             System.out.println( myAgent.getLocalName() + " is ready! " + coordinate );
         }
+
 
         public boolean done() {
             return finished;
         }
 
     }
+
+    public static String agentType() {
+        return "client";
+    }
+
 }

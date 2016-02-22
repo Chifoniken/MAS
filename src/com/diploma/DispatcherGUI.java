@@ -1,7 +1,6 @@
 package com.diploma;
 
 import jade.gui.GuiEvent;
-import org.openstreetmap.gui.jmapviewer.Coordinate;
 
 import javax.swing.*;
 import java.awt.event.*;
@@ -17,12 +16,10 @@ public class DispatcherGUI extends JFrame implements Map.MapCallBack{
     private JList<String> taxiAgentsList;
     private JList<String> clientAgentList;
     private Map map;
+    private JComboBox<String> agentSelector;
 
     private DefaultListModel<String> taxiListModel;
     private DefaultListModel<String> clientListModel;
-
-    static public final int ADD_TAXI_AGENT_EVENT = 1;
-    static public final int ADD_CLIENT_AGENT_EVENT = 2;
 
     public DispatcherGUI(Dispatcher dispatcher) {
 
@@ -44,6 +41,21 @@ public class DispatcherGUI extends JFrame implements Map.MapCallBack{
             }
         });
 
+        agentSelector.addItem("Taxi");
+        agentSelector.addItem("Client");
+        agentSelector.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+
+                if (((JComboBox) e.getSource()).getSelectedIndex() == 0) {
+                    map.enableTaxiMarker();
+                }
+                else {
+                    map.enableClientMarker();
+                }
+            }
+        });
+
         taxiListModel = new DefaultListModel<>();
         taxiAgentsList.setModel(taxiListModel);
 
@@ -57,13 +69,19 @@ public class DispatcherGUI extends JFrame implements Map.MapCallBack{
     }
 
     public void addClientAgent(String clientName) {
-        taxiListModel.addElement(clientName);
+        clientListModel.addElement(clientName);
     }
 
+
+    public Map getMap() {
+        return map;
+    }
+
+
     @Override
-    public void onMapClicked(Coordinate coordinate) {
-        System.out.println(coordinate);
-        GuiEvent guiEvent = new GuiEvent(this, ADD_TAXI_AGENT_EVENT);
+    public void onMapClicked(SerializableCoordinate coordinate, int agentType) {
+
+        GuiEvent guiEvent = new GuiEvent(this, agentType);
         guiEvent.addParameter(coordinate);
         agent.postGuiEvent(guiEvent);
     }

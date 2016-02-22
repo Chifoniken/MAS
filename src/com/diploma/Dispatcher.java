@@ -1,35 +1,32 @@
 package com.diploma;
 
-import jade.core.AID;
 import jade.core.Agent;
-import jade.core.Runtime;
 import jade.core.behaviours.SimpleBehaviour;
 import jade.gui.GuiAgent;
 import jade.gui.GuiEvent;
 import jade.lang.acl.ACLMessage;
+import jade.lang.acl.UnreadableException;
 import jade.wrapper.AgentController;
-import jade.wrapper.ControllerException;
 import jade.wrapper.StaleProxyException;
-import org.openstreetmap.gui.jmapviewer.Coordinate;
 
-import java.util.ArrayList;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map.Entry;
 
 /**
  * Created by arsen on 20.12.2015.
  */
 public class Dispatcher extends GuiAgent {
 
-    public static String SUBSCRIBE_TAXI = "addTaxi";
-    public static String SUBSCRIBE_CLIENT = "addClient";
-
     transient private DispatcherGUI gui;
 
-    ArrayList<AID> taxiAgents;
-    ArrayList<AID> clientAgents;
+    HashMap<String, Taxi> taxiAgents;
+    HashMap<String, Client> clientAgents;
 
     protected void setup() {
 
-        taxiAgents = new ArrayList<>();
+        taxiAgents = new HashMap<>();
+        clientAgents = new HashMap<>();
 
         addBehaviour(new DispatcherBehavior(this));
 
@@ -39,10 +36,18 @@ public class Dispatcher extends GuiAgent {
 
     @Override
     public void doDelete() {
-        for (AID taxiAgent : taxiAgents) {
+
+        for (Entry<String, Taxi> entry : taxiAgents.entrySet()) {
             ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
-            msg.setContent(Taxi.DO_DELETE);
-            msg.addReceiver(taxiAgent);
+            msg.setContent(PrimitiveAgent.DO_DELETE);
+            msg.addReceiver(entry.getValue().getAID());
+            send(msg);
+        }
+
+        for (Entry<String, Client> entry: clientAgents.entrySet()) {
+            ACLMessage msg = new ACLMessage(ACLMessage.INFORM);
+            msg.setContent(PrimitiveAgent.DO_DELETE);
+            msg.addReceiver(entry.getValue().getAID());
             send(msg);
         }
 
@@ -55,25 +60,25 @@ public class Dispatcher extends GuiAgent {
 
         Integer type = guiEvent.getType();
 
-        if (type.equals(DispatcherGUI.ADD_TAXI_AGENT_EVENT)) {
+        if (type.equals(Map.TAXI_AGENT)) {
             AgentController taxi;
             try {
                 Object[] arg = new Object[2];
-                arg[0] = getName();
-                arg[1] = guiEvent.getParameter(0);
+                arg[0] = getName(); // pass dispatcher name
+                arg[1] = guiEvent.getParameter(0); // pass coordinates
 
                 taxi = getContainerController().createNewAgent("Taxi_" + (taxiAgents.size() + 1), "com.diploma.Taxi", arg);
                 taxi.start();
             } catch (StaleProxyException e) {
                 e.printStackTrace();
             }
-        }
-        else if (type.equals(DispatcherGUI.ADD_CLIENT_AGENT_EVENT)) {
+        } else
+        if (type.equals(Map.CLIENT_AGENT)) {
             AgentController client;
             try {
                 Object[] arg = new Object[2];
-                arg[0] = getName();
-                arg[1] = guiEvent.getParameter(0);
+                arg[0] = getName(); // pass dispatcher name
+                arg[1] = guiEvent.getParameter(0); // pass coordinates
 
                 client = getContainerController().createNewAgent("Client_" + (clientAgents.size() + 1), "com.diploma.Client", arg);
                 client.start();
@@ -84,36 +89,61 @@ public class Dispatcher extends GuiAgent {
     }
 
 
+    // Find TaxiAgent for ClientAgent
+    //
+    private void findTaxiForClient(Client client) {
+
+        double bestPath = -1;
+        String taxiName = null;
+
+        Map map = gui.getMap();
+
+        for (Entry<String, Taxi> entry : taxiAgents.entrySet()) {
+
+            if (entry.getValue().isBusy()) {
+                continue;
+            }
+
+            double path = map.getShortestPath(entry.getValue().getCoordinate(), client.getCoordinate());
+
+            if (path < bestPath || bestPath < 0) {
+                bestPath = path;
+                taxiName = entry.getValue().getName();
+            }
+        }
+
+
+        if (bestPath > 0) {
+            map.drawPath(taxiAgents.get(taxiName).getCoordinate(), client.getCoordinate()); // for debug only
+
+
+            // Ask TaxiAgent if he accepts current ClientAgent
+            //
+            ACLMessage msg = new ACLMessage(ACLMessage.PROPOSE);
+            msg.addUserDefinedParameter(Data.AGENT_TYPE, Dispatcher.agentType());
+            msg.addReceiver(taxiAgents.get(taxiName).getAID());
+
+            try {
+                msg.setContentObject(client);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            send(msg);
+        }
+
+    }
+
+
     class DispatcherBehavior extends SimpleBehaviour {
 
         private boolean finished = false;
+
 
         public DispatcherBehavior(Agent a) {
             super(a);
         }
 
-        public void action() {
-
-            ACLMessage msg = myAgent.receive();
-
-            if (msg != null) {
-                if (msg.getPerformative() == ACLMessage.SUBSCRIBE) {
-
-                    if (msg.getContent().equals(SUBSCRIBE_TAXI)) {
-                        taxiAgents.add(msg.getSender());
-                        gui.addTaxiAgent(msg.getSender().getName());
-                        System.out.println( msg.getSender().getName() + " is registered!" );
-                    }
-                    else if (msg.getContent().equals(SUBSCRIBE_CLIENT)) {
-                        clientAgents.add(msg.getSender());
-                        gui.addClientAgent(msg.getSender().getName());
-                        System.out.println( msg.getSender().getName() + " is registered!" );
-                    }
-
-                }
-            }
-
-        }
 
         @Override
         public void onStart() {
@@ -121,9 +151,73 @@ public class Dispatcher extends GuiAgent {
             System.out.println( myAgent.getLocalName() + " is ready!" );
         }
 
+
+        public void action() {
+
+            ACLMessage msg = myAgent.receive();
+
+            if (msg != null) {
+                if (msg.getPerformative() == ACLMessage.SUBSCRIBE) {
+                    if (msg.getUserDefinedParameter(Data.AGENT_TYPE).equals(Taxi.agentType())) {
+                        actionTaxiAgentRegistration(msg);
+                    } else
+                    if (msg.getUserDefinedParameter(Data.AGENT_TYPE).equals(Client.agentType())) {
+                        actionClientAgentRegistration(msg);
+                    }
+                } else
+                if (msg.getPerformative() == ACLMessage.ACCEPT_PROPOSAL) {
+                    if (msg.getUserDefinedParameter(Data.AGENT_TYPE).equals(Taxi.agentType())) {
+                        actionTaxiAcceptedProposal(msg);
+                    }
+                }
+            }
+        }
+
+
+        private void actionTaxiAgentRegistration(ACLMessage msg) {
+            try {
+                Taxi taxi = (Taxi) msg.getContentObject();
+                taxiAgents.put(taxi.getName(), taxi);
+                gui.addTaxiAgent(msg.getSender().getName());
+                System.out.println( msg.getSender().getName() + " is registered!" );
+            } catch (UnreadableException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        private void actionTaxiAcceptedProposal(ACLMessage msg) {
+            try {
+                Taxi taxi = (Taxi) msg.getContentObject();
+                String clientName = msg.getContent();
+                taxiAgents.put(taxi.getName(), taxi);
+                clientAgents.remove(clientName);
+            } catch (UnreadableException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+        private void actionClientAgentRegistration(ACLMessage msg) {
+            try {
+                Client client = (Client) msg.getContentObject();
+                clientAgents.put(client.getName(), client);
+                gui.addClientAgent(msg.getSender().getName());
+                System.out.println( msg.getSender().getName() + " is registered!" );
+                findTaxiForClient(client);
+            } catch (UnreadableException e) {
+                e.printStackTrace();
+            }
+        }
+
+
         public boolean done() {
             return finished;
         }
 
+    }
+
+    public static String agentType() {
+        return "dispatcher";
     }
 }

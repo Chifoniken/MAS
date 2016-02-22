@@ -1,41 +1,76 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <form xmlns="http://www.intellij.com/uidesigner/form/" version="1" bind-to-class="com.diploma.DispatcherGUI">
-  <grid id="27dc6" binding="contentPanel" layout-manager="GridLayoutManager" row-count="1" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="0" vgap="0">
+  <grid id="27dc6" binding="contentPanel" layout-manager="GridLayoutManager" row-count="2" column-count="3" same-size-horizontally="false" same-size-vertically="false" hgap="0" vgap="0">
     <margin top="0" left="0" bottom="0" right="0"/>
     <constraints>
-      <xy x="20" y="7" width="776" height="436"/>
+      <xy x="20" y="7" width="784" height="436"/>
     </constraints>
     <properties>
       <alignmentX value="0.5"/>
-      <background color="-15232296"/>
+      <background color="-2232361"/>
     </properties>
     <border type="none"/>
     <children>
       <component id="deb1a" class="javax.swing.JList" binding="taxiAgentsList">
         <constraints>
-          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="8" fill="2" indent="0" use-parent-layout="false">
+          <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="7" hsize-policy="0" anchor="8" fill="2" indent="0" use-parent-layout="false">
             <minimum-size width="256" height="-1"/>
             <preferred-size width="256" height="-1"/>
             <maximum-size width="256" height="-1"/>
           </grid>
         </constraints>
-        <properties/>
+        <properties>
+          <background color="-2503895"/>
+          <foreground color="-12506303"/>
+        </properties>
       </component>
       <component id="91ac1" class="javax.swing.JList" binding="clientAgentList">
         <constraints>
-          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="7" anchor="8" fill="2" indent="0" use-parent-layout="false">
+          <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="7" hsize-policy="0" anchor="8" fill="2" indent="0" use-parent-layout="false">
             <minimum-size width="256" height="-1"/>
             <preferred-size width="256" height="-1"/>
             <maximum-size width="256" height="-1"/>
           </grid>
         </constraints>
-        <properties/>
+        <properties>
+          <background color="-14632102"/>
+          <foreground color="-12506303"/>
+        </properties>
       </component>
       <nested-form id="68ad7" form-file="com/diploma/Map.form" binding="map" default-binding="true">
         <constraints>
-          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="7" anchor="8" fill="2" indent="0" use-parent-layout="false"/>
+          <grid row="1" column="2" row-span="1" col-span="1" vsize-policy="3" hsize-policy="7" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
         </constraints>
       </nested-form>
+      <component id="bfd30" class="javax.swing.JComboBox" binding="agentSelector" default-binding="true">
+        <constraints>
+          <grid row="0" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="2" anchor="8" fill="1" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties/>
+      </component>
+      <component id="c150a" class="javax.swing.JLabel">
+        <constraints>
+          <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <background color="-14632102"/>
+          <enabled value="true"/>
+          <foreground color="-16777216"/>
+          <horizontalAlignment value="0"/>
+          <text value="Client agents"/>
+        </properties>
+      </component>
+      <component id="9cc8b" class="javax.swing.JLabel">
+        <constraints>
+          <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+        </constraints>
+        <properties>
+          <background color="-2503895"/>
+          <foreground color="-16777216"/>
+          <horizontalAlignment value="0"/>
+          <text value="Taxi agents"/>
+        </properties>
+      </component>
     </children>
   </grid>
 </form>
