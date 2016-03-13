@@ -1,6 +1,7 @@
 package com.diploma;
 
 import jade.gui.GuiEvent;
+import org.openstreetmap.gui.jmapviewer.Coordinate;
 
 import javax.swing.*;
 import java.awt.event.*;
@@ -64,12 +65,21 @@ public class DispatcherGUI extends JFrame implements Map.MapCallBack{
 
     }
 
-    public void addTaxiAgent(String taxiName) {
+
+    public void addTaxiAgent(Coordinate coordinate, String taxiName) {
         taxiListModel.addElement(taxiName);
+        map.setTaxi(coordinate, taxiName);
     }
 
-    public void addClientAgent(String clientName) {
+
+    public void addClientAgent(Coordinate coordinate, String clientName) {
         clientListModel.addElement(clientName);
+        map.setClient(coordinate, clientName);
+    }
+
+
+    public void removeClientAgent(String clientName) {
+        clientListModel.removeElement(clientName);
     }
 
 

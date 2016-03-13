@@ -9,10 +9,9 @@ import org.openstreetmap.gui.jmapviewer.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.MouseEvent;
-import java.io.File;
-import java.util.ArrayList;
+import java.awt.event.MouseWheelEvent;
+import java.util.*;
 import java.util.List;
-import java.util.Properties;
 
 /**
  * Created by arsen on 09.01.2016.
@@ -24,69 +23,114 @@ public class Map extends JFrame {
     }
 
     private JPanel contentPanel;
-    private JMapViewer mapViewer;
+    private JMapViewer map;
     private MapCallBack callBack;
-
-    File graphFile;
 
     static public final int TAXI_AGENT = 1;
     static public final int CLIENT_AGENT = 2;
 
     private boolean isTaxi;
 
+    private HashMap<String, MapMarkerDot> taxiMarkers;
+    private HashMap<String, MapMarkerDot> clientMarkers;
+
     public Map() {
+
+        taxiMarkers = new HashMap<>();
+        clientMarkers = new HashMap<>();
 
         setContentPane(contentPanel);
         setTitle("Map");
         setSize(800, 600);
         setExtendedState(JFrame.MAXIMIZED_BOTH);
 
+        map.setTileSource(new OfflineOsmTileSource(Helper.mapTiles, 13, 16));
 
         Coordinate tashkent = new Coordinate(41.289211f, 69.263533f);
-        mapViewer.setDisplayPosition(tashkent, 16);
+        map.setDisplayPosition(tashkent, 13);
+        map.setMapRectanglesVisible(true);
 
         isTaxi = true;
 
-        new DefaultMapController(mapViewer){
+        new DefaultMapController(map){
 
             @Override
             public void mouseClicked(MouseEvent e) {
                 SerializableCoordinate coordinate = new SerializableCoordinate(map.getPosition(e.getPoint()).getLat(), map.getPosition(e.getPoint()).getLon());
 
-                MapMarkerDot mapMarkerDot = new MapMarkerDot(new Coordinate(coordinate.getLat(), coordinate.getLon()));
+                MapMarkerDot markerDot = new MapMarkerDot(new Coordinate(coordinate.getLat(), coordinate.getLon()));
 
                 if (isTaxi) {
-                    mapMarkerDot.setBackColor(Color.yellow);
-                    map.addMapMarker(mapMarkerDot);
+                    markerDot.setBackColor(Color.yellow);
+                    map.addMapMarker(markerDot);
                     callBack.onMapClicked(coordinate, TAXI_AGENT);
                 }
                 else {
-                    mapMarkerDot.setBackColor(Color.green);
-                    map.addMapMarker(mapMarkerDot);
+                    markerDot.setBackColor(Color.green);
+                    map.addMapMarker(markerDot);
                     callBack.onMapClicked(coordinate, CLIENT_AGENT);
                 }
-
             }
+
+            @Override
+            public void mouseWheelMoved(MouseWheelEvent var1) {
+                this.map.setZoom(this.map.getZoom() - var1.getWheelRotation(), var1.getPoint());
+            }
+
         };
 
-        readOSM();
+
+        java.util.Timer timer = new java.util.Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                updateMarkers();
+            }
+        }, 100, 100);
+
     }
 
     public void setCallBack(MapCallBack c) {
         callBack = c;
     }
 
-    private void readOSM() {
-        graphFile = new File("D:\\MSU\\Diploma\\Projects\\mas\\uz_2po.gph");
+
+    public void updateMarkers() {
+
+        map.removeAllMapMarkers();
+
+        for (java.util.Map.Entry<String, MapMarkerDot> entry : taxiMarkers.entrySet()) {
+            map.addMapMarker(entry.getValue());
+        }
+
+        for (java.util.Map.Entry<String, MapMarkerDot> entry : clientMarkers.entrySet()) {
+            map.addMapMarker(entry.getValue());
+        }
     }
+
+
+    public void setTaxi(Coordinate coordinate, String name) {
+        MapMarkerDot markerDot = new MapMarkerDot(coordinate);
+        markerDot.setBackColor(Color.yellow);
+        markerDot.setName(name.split("@")[0]);
+        taxiMarkers.put(name.split("@")[0], markerDot);
+    }
+
+
+    public void setClient(Coordinate coordinate, String name) {
+        MapMarkerDot markerDot = new MapMarkerDot(coordinate);
+        markerDot.setBackColor(Color.green);
+        markerDot.setName(name.split("@")[0]);
+        clientMarkers.put(name.split("@")[0], markerDot);
+    }
+
 
     public double getShortestPath(Coordinate source, Coordinate target) {
 
-        Graph graph = new Graph(graphFile);
         DefaultRouter router = new DefaultRouter();
 
-        int sourceId = graph.findClosestVertexId((float) source.getLat(), (float) source.getLon());
-        int targetId = graph.findClosestVertexId((float) target.getLat(), (float) target.getLon());
+        int sourceId = Helper.getInstance().getGraph().findClosestVertexId((float) source.getLat(), (float) source.getLon());
+        int targetId = Helper.getInstance().getGraph().findClosestVertexId((float) target.getLat(), (float) target.getLon());
 
         // additional params for DefaultRouter
         Properties params = new Properties();
@@ -95,23 +139,24 @@ public class Map extends JFrame {
         params.setProperty("ignoreOneWays", "false");
         params.setProperty("heuristicFactor", "1.0"); // 0.0 Dijkstra, 1.0 good A*
 
-        int[] path = router.findPath(graph, sourceId, targetId, Float.MAX_VALUE, params);
+        int[] path = router.findPath(Helper.getInstance().getGraph(), sourceId, targetId, Float.MAX_VALUE, params);
 
-        double pathLength = graph.calcPathLength(path);
+        if (path != null) {
+            return Helper.getInstance().getGraph().calcPathLength(path);
+        }
 
-        graph.close();
-
-        return pathLength;
+        return -1;
     }
 
 
-    public void drawPath(Coordinate source, Coordinate target) {
+    public ArrayList<SerializableCoordinate> getPathCoordinates(Coordinate source, Coordinate target) {
 
-        Graph graph = new Graph(graphFile);
+        ArrayList<SerializableCoordinate> coordinates = new ArrayList<>();
+
         DefaultRouter router = new DefaultRouter();
 
-        int sourceId = graph.findClosestVertexId((float) source.getLat(), (float) source.getLon());
-        int targetId = graph.findClosestVertexId((float) target.getLat(), (float) target.getLon());
+        int sourceId = Helper.getInstance().getGraph().findClosestVertexId((float) source.getLat(), (float) source.getLon());
+        int targetId = Helper.getInstance().getGraph().findClosestVertexId((float) target.getLat(), (float) target.getLon());
 
         // additional params for DefaultRouter
         Properties params = new Properties();
@@ -120,7 +165,39 @@ public class Map extends JFrame {
         params.setProperty("ignoreOneWays", "false");
         params.setProperty("heuristicFactor", "0.0"); // 0.0 Dijkstra, 1.0 good A*
 
-        int[] path = router.findPath(graph, sourceId, targetId, Float.MAX_VALUE, params);
+        int[] path = router.findPath(Helper.getInstance().getGraph(), sourceId, targetId, Float.MAX_VALUE, params);
+
+        if (path != null) { // Found!
+
+            for (int i = 0; i < path.length; i++) {
+                RoutingResultSegment rrs = Helper.getInstance().getGraph().lookupSegment(path[i]);
+                for (long coord : rrs.getCoords().getCoords()) {
+                    SerializableCoordinate coordinate = new SerializableCoordinate(LatLon.latOf(coord), LatLon.lonOf(coord));
+                    coordinates.add(coordinate);
+                }
+            }
+
+        }
+
+        return coordinates;
+    }
+
+
+    public void drawPath(Coordinate source, Coordinate target) {
+
+        DefaultRouter router = new DefaultRouter();
+
+        int sourceId = Helper.getInstance().getGraph().findClosestVertexId((float) source.getLat(), (float) source.getLon());
+        int targetId = Helper.getInstance().getGraph().findClosestVertexId((float) target.getLat(), (float) target.getLon());
+
+        // additional params for DefaultRouter
+        Properties params = new Properties();
+        params.setProperty("findShortestPath", "true");
+        params.setProperty("ignoreRestrictions", "false");
+        params.setProperty("ignoreOneWays", "false");
+        params.setProperty("heuristicFactor", "0.0"); // 0.0 Dijkstra, 1.0 good A*
+
+        int[] path = router.findPath(Helper.getInstance().getGraph(), sourceId, targetId, Float.MAX_VALUE, params);
 
         if (path != null) { // Found!
 
@@ -128,7 +205,7 @@ public class Map extends JFrame {
 //            coordinates.add(source);
 
             for (int i = 0; i < path.length; i++) {
-                RoutingResultSegment rrs = graph.lookupSegment(path[i]);
+                RoutingResultSegment rrs = Helper.getInstance().getGraph().lookupSegment(path[i]);
                 for (long coord : rrs.getCoords().getCoords()) {
                     Coordinate coordinate = new Coordinate(LatLon.latOf(coord), LatLon.lonOf(coord));
                     coordinates.add(coordinate);
@@ -138,16 +215,16 @@ public class Map extends JFrame {
 //            coordinates.add(target);
 
             MapPath polyLine = new MapPath(coordinates);
-            mapViewer.addMapPolygon(polyLine);
+            map.addMapPolygon(polyLine);
         }
 
-        graph.close();
     }
 
 
     public void enableTaxiMarker() {
         isTaxi = true;
     }
+
 
     public void enableClientMarker() {
         isTaxi = false;

@@ -7,6 +7,9 @@ import jade.wrapper.AgentController;
 import jade.wrapper.ContainerController;
 import jade.wrapper.StaleProxyException;
 
+import java.util.Timer;
+import java.util.TimerTask;
+
 /**
  * Created by arsen on 20.12.2015.
  */

@@ -30,64 +30,47 @@ public class Client extends PrimitiveAgent implements Serializable {
 
     class ClientBehavior extends SimpleBehaviour {
 
-        private boolean finished = false;
-
-
         public ClientBehavior(Agent a) {
             super(a);
-        }
-
-
-        public void action() {
-
-            ACLMessage msg = myAgent.receive();
-
-            if (msg != null) {
-
-                if (msg.getPerformative() == ACLMessage.INFORM) {
-
-                    if (msg.getContent().equals(DO_DELETE)) {
-                        System.out.println(getName() + " is deleted!" );
-                        doDelete();
-                    }
-
-                }
-            }
-
         }
 
 
         @Override
         public void onStart() {
             super.onStart();
-
-            coordinate = (SerializableCoordinate) getArguments()[1];
-
-            dispatcher = new AID((String) getArguments()[0], true);
-            ACLMessage msg = new ACLMessage(ACLMessage.SUBSCRIBE);
-            msg.addUserDefinedParameter(Data.AGENT_TYPE, agentType());
-            msg.addReceiver(dispatcher);
-
-            try {
-                msg.setContentObject(myAgent);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            send(msg);
-
-            System.out.println( myAgent.getLocalName() + " is ready! " + coordinate );
+            actionRegistration();
         }
 
 
+        @Override
+        public void action() {
+            ACLMessage msg = receive();
+
+            if (msg != null) {
+
+                if (msg.getPerformative() == ACLMessage.INFORM) {
+                    if (msg.getUserDefinedParameter(Helper.AGENT_ROLE).equals(Dispatcher.agentType())) {
+                        if (msg.getContent().equals(DO_DELETE)) {
+                            actionDelete(msg);
+                        }
+                    }
+                }
+
+            }
+        }
+
+
+        @Override
         public boolean done() {
-            return finished;
+            return false;
         }
 
     }
 
-    public static String agentType() {
-        return "client";
+
+    @Override
+    protected String role() {
+        return Helper.CLIENT;
     }
 
 }
